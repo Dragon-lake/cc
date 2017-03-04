@@ -27,15 +27,15 @@ public class Deploy {
     private static Weight [][] graph;
 
     /*消费节点与相连网络节点的信息存储
-      存储的格式如下：Map<Map<Integer,Integer>, Integer>
-      最外面的map中key是消费节点与消费节点的带宽需求，value是相连的网络节点的ID
-      里面的map中key是消费节点，value是消费节点的带宽需求
+      存储的格式如下：Map<Integer,ConsumptionNodeInfo>
+      map中key是消费节点，value是相连的网络节点的ID与需要的带宽
      */
-    private static Map<Map<Integer,Integer>, Integer> consumptionInfo;
+    private static Map<Integer,ConsumptionNodeInfo> consumptionInfo;
 
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
+        System.out.println(consumptionInfo.get(0).getLinkedID());
         return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
@@ -96,15 +96,18 @@ public class Deploy {
         while (count-- > 0) {
             String[] infos = lineTos(graphContent[lineNum++]);
             int consumptionID = sToi(infos[0]);
-            int netId = sToi(infos[1]);
+            int linkedID = sToi(infos[1]);
             int requiredBandWidth = sToi(infos[2]);
 
-            Map<Integer, Integer> key = new HashMap<>(consumptionNodeCount);
-            key.put(consumptionID,requiredBandWidth);
-            consumptionInfo.put(key,netId);
+            ConsumptionNodeInfo info = new ConsumptionNodeInfo();
+            info.setLinkedID(linkedID);
+            info.setRequiredBandWidth(requiredBandWidth);
+            consumptionInfo.put(consumptionID,info);
         }
 
     }
+
+
 
 
     /**
@@ -153,7 +156,32 @@ public class Deploy {
 
         public void setNetRentCost(int netRentCost) {
             this.netRentCost = netRentCost;
+
+        }
+
+    }
+
+    static class ConsumptionNodeInfo{
+        private int linkedID;
+        private int requiredBandWidth;
+
+
+        public int getLinkedID() {
+            return linkedID;
+        }
+
+        public void setLinkedID(int linkedID) {
+            this.linkedID = linkedID;
+        }
+
+        public int getRequiredBandWidth() {
+            return requiredBandWidth;
+        }
+
+        public void setRequiredBandWidth(int requiredBandWidth) {
+            this.requiredBandWidth = requiredBandWidth;
         }
     }
+
 
 }
