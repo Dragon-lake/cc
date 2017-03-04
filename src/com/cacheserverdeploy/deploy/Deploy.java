@@ -35,7 +35,7 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-        System.out.println(consumptionInfo.get(0).getLinkedID());
+        System.out.println(consumptionInfo.get(8).getLinkedID());
         return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
@@ -136,7 +136,7 @@ public class Deploy {
      * 网络节点链路图的类
      * 图中边的权值信息，包括总带宽费用，网络租用费
      */
-    static class Weight{
+    private static class Weight{
         //总带宽费用
         private int totalBandwidth;
         //网络租用费
@@ -161,8 +161,15 @@ public class Deploy {
 
     }
 
-    static class ConsumptionNodeInfo{
+    /**
+     * 消费节点的相关信息
+     * 与之相连的ID
+     * 需求的带宽
+     */
+    private static class ConsumptionNodeInfo{
+        //相连的ID
         private int linkedID;
+        //需求的带宽
         private int requiredBandWidth;
 
 
