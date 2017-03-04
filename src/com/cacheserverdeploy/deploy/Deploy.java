@@ -35,7 +35,6 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-        System.out.println(consumptionInfo.get(8).getLinkedID());
         return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
@@ -81,7 +80,9 @@ public class Deploy {
             Weight weight = new Weight();
             weight.setTotalBandwidth(sToi(edgeInfo[2]));
             weight.setNetRentCost(sToi(edgeInfo[3]));
+            //无向图
             graph[originID][endID] = weight;
+            graph[endID][originID] = weight;
 
             if (lineTos(graphContent[lineNum]).length == 0) {
                 isNotEnd = false;
