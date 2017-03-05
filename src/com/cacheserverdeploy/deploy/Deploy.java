@@ -38,6 +38,48 @@ public class Deploy {
         return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
+    /**
+     * 生成最小生成树
+     * 生成树的策略从一个点 看其相连的边，在边的全值中，选择 网络租用费用最低，流量最大。
+     * 生成树的结构 由实现人决定
+     * @param start
+     * @return 返回生成树
+     */
+    public static void createMST(int start){
+
+    }
+
+    /**
+     * 1. 生成树节点排序（排序规则，度从大到小）
+     * 2. 在度最大的点上 添加服务器
+     * 3. 判断该服务器是否能满足所有的消费节点
+     * 4. 如果能全部满足，在添加第二个服务器，添加的规则是在第二个度最大的添加，判断第二个服务器成本是否降低
+     * 5. 如果不能全部满足，在添加第二个服务器，判断是否满足全部节点，如果不满足，则依次添加
+     * @param mst 一个生成树类型的变量，不是String
+     * @return 所有服务器的ID
+     */
+    public static int[] getDeployment(String mst){
+
+        return new int[]{};
+    }
+
+    /**
+     * 1. 按照生成树去判断服务器能不能走到消费节点
+     * 2. 如果全部能走到，则返回true
+     * 3. 判断能不能走到的策略:判断服务节点去消费节点的唯一路径是否满足带宽需求，满足就能走到。
+     * 4. 如果不能全部走到，保存不能走到的消费节点，假设不加服务器，加边()
+     * 5. 加边的策略：消费节点所需带宽-最小生成树中的边的带宽 走费用最小的带宽最大的，从下往上走
+     *
+     *
+     *
+     * @param serverID 一组服务器的ID
+     * @return true 如果部署的服务器能满足所有的消费节点。false 不满足
+     */
+    public static boolean isSatisfyAllConsumptionNode(int[] serverID){
+        return false;
+    }
+
+
 
     /**
      * 处理图文本信息，构造图
@@ -80,6 +122,7 @@ public class Deploy {
             Weight weight = new Weight();
             weight.setTotalBandwidth(sToi(edgeInfo[2]));
             weight.setNetRentCost(sToi(edgeInfo[3]));
+            weight.setUsedBandWidth(0);
             //无向图
             graph[originID][endID] = weight;
             graph[endID][originID] = weight;
@@ -142,6 +185,8 @@ public class Deploy {
         private int totalBandwidth;
         //网络租用费
         private int netRentCost;
+        //已用带宽
+        private int usedBandWidth;
 
         public int getTotalBandwidth() {
             return totalBandwidth;
@@ -157,9 +202,15 @@ public class Deploy {
 
         public void setNetRentCost(int netRentCost) {
             this.netRentCost = netRentCost;
-
         }
 
+        public int getUsedBandWidth() {
+            return usedBandWidth;
+        }
+
+        public void setUsedBandWidth(int usedBandWidth) {
+            this.usedBandWidth = usedBandWidth;
+        }
     }
 
     /**
