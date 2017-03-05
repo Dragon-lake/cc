@@ -45,9 +45,81 @@ public class Deploy {
      * @param start
      * @return 返回生成树
      */
-    public static void createMST(int start){
+    public static Weight[][] createMST(int start){
 
+        //保存当前生成树到到剩余各顶点最小的weight值
+        Weight[] lowcost=new Weight[netNodeCount];
+        //顶点i是否被并入生成树中
+        int[] vset=new int[netNodeCount];
+        //最小值
+        Weight min=new Weight();
+        //保存新加入生成树的节点
+        int v=0;
+        //保存剩余顶点到当前生成树权值最小的边的顶点
+        int k=0;
+        //保存生成树的邻接矩阵
+        Weight[][] minTree=new Weight[netNodeCount][netNodeCount];
+        //保存被并入生成树的节点的前驱节点（邻接点）
+        int[] preset=new int[netNodeCount];
+
+        //初始化
+        for(int i=0;i<netNodeCount;i++){
+            lowcost[i]=graph[start][i];
+            vset[i]=0;
+            preset[i]=start;
+        }
+        //起始节点被并入生成树
+        vset[start]=1;
+
+        for(int i=0;i<netNodeCount;i++){
+            //min初始化为比图中任何边的值都大的常量
+            min.setTotalBandwidth(0);
+            min.setNetRentCost(101);
+
+            //选出候选边中的最小者
+            for(int j=0;j<netNodeCount;j++){
+                if(vset[j]==0 && compareWeight(lowcost[j],min)){
+                    min=lowcost[j];
+                    k=j;
+                }
+                //k并入生成树
+                vset[k]=1;
+                //k设为中介节点
+                v=k;
+                //把边k和其前驱节点连接的边保存到生成树
+                minTree[preset[k]][k]=min;
+
+                //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
+                for(int l=0;l<netNodeCount;l++){
+
+                    if(vset[l]==0 && compareWeight(graph[v][l],lowcost[l])){
+                        lowcost[j]=graph[v][l];
+                        preset[l]=v;
+                    }
+
+                }
+
+            }
+        }
+        return minTree;
     }
+
+    /**
+     * 比较两个weight的大小
+     * @param两个weight
+     * @return 前者比后者小，返回TRUE，否则返回FALSE
+     */
+    public static boolean compareWeight(Weight weight1,Weight weight2){
+
+        if(weight1.getNetRentCost()<weight2.getNetRentCost()) return true;
+        else if(weight1.getNetRentCost()>weight2.getNetRentCost()) return false;
+        else {
+            if(weight1.getTotalBandwidth()>=weight2.getTotalBandwidth()) return true;
+        }
+
+        return false;
+    }
+
 
     /**
      * 1. 生成树节点排序（排序规则，度从大到小）
