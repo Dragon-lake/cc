@@ -45,22 +45,7 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-        Map<Integer, ArrayList<Integer>> map = createMST(0);
-        Iterator iterator = map.entrySet().iterator();
-        while (iterator.hasNext()) {
-            Map.Entry entry = (Map.Entry) iterator.next();
-            ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
-            for (int i = 0; i < lists.size(); i++) {
-                System.out.println(entry.getKey() + " " + lists.get(i));
-            }
-//            System.out.print(entry.getKey());
-//            System.out.println("--------------");
-//            ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
-//            for (int i = 0 ; i < lists.size();i++) {
-//                System.out.print(lists.get(i) + " ");
-//            }
-//            System.out.println();
-        }
+        printMST(0);
         return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
@@ -157,13 +142,6 @@ public class Deploy {
      */
     public static boolean compareWeight(Weight weight1, Weight weight2) {
 
-//        if(weight1==null && weight2==null) return false;
-//        else if(weight1==null){
-//            return false;
-//        }else if(weight2==null){
-//            return true;
-//        }
-
         if (weight1.getNetRentCost() < weight2.getNetRentCost()) return true;
         else if (weight1.getNetRentCost() > weight2.getNetRentCost()) return false;
         else {
@@ -177,9 +155,10 @@ public class Deploy {
     /**
      * 1. 生成树节点排序（排序规则，度从大到小）
      * 2. 在度最大的点上 添加服务器
-     * 3. 判断该服务器是否能满足所有的消费节点
-     * 4. 如果能全部满足，在添加第二个服务器，添加的规则是在第二个度最大的添加，判断第二个服务器成本是否降低
-     * 5. 如果不能全部满足，在添加第二个服务器，判断是否满足全部节点，如果不满足，则依次添加
+     * 3. 找出服务器到各个消费点的路径上最小的流量值
+     * 4. 如果该路径的最小的流量值大于等于消费节点所需的带宽，则选择该路径，并记录
+     * 5. 如果该路径的最小的流量值小于消费节点的带宽，则依旧选择该路径，消费节点所需要的带宽减去最小的流量值，并记录
+     * 6.
      *
      * @param mst 一个生成树类型的变量，不是String
      * @return 所有服务器的ID
@@ -366,5 +345,24 @@ public class Deploy {
         }
     }
 
+
+    public static void printMST(int start){
+        Map<Integer, ArrayList<Integer>> map = createMST(start);
+        Iterator iterator = map.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry entry = (Map.Entry) iterator.next();
+            ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
+            for (int i = 0; i < lists.size(); i++) {
+                System.out.println(entry.getKey() + " " + lists.get(i));
+            }
+//            System.out.print(entry.getKey());
+//            System.out.println("--------------");
+//            ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
+//            for (int i = 0 ; i < lists.size();i++) {
+//                System.out.print(lists.get(i) + " ");
+//            }
+//            System.out.println();
+        }
+    }
 
 }
