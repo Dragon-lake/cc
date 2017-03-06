@@ -32,6 +32,13 @@ public class Deploy {
      */
     private static Map<Integer,ConsumptionNodeInfo> consumptionInfo;
 
+    //表示不可达的常亮
+    private static Weight NO_PATH_WEIGHT=new Weight();
+    static {
+        NO_PATH_WEIGHT.setTotalBandwidth(0);
+        NO_PATH_WEIGHT.setNetRentCost(101);
+    }
+
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
@@ -111,10 +118,17 @@ public class Deploy {
      */
     public static boolean compareWeight(Weight weight1,Weight weight2){
 
+//        if(weight1==null && weight2==null) return false;
+//        else if(weight1==null){
+//            return false;
+//        }else if(weight2==null){
+//            return true;
+//        }
+
         if(weight1.getNetRentCost()<weight2.getNetRentCost()) return true;
         else if(weight1.getNetRentCost()>weight2.getNetRentCost()) return false;
         else {
-            if(weight1.getTotalBandwidth()>=weight2.getTotalBandwidth()) return true;
+            if(weight1.getTotalBandwidth()>weight2.getTotalBandwidth()) return true;
         }
 
         return false;
@@ -171,10 +185,10 @@ public class Deploy {
         //构造图
         graph = new Weight[netNodeCount][netNodeCount];
 
-        //初始化图中的权值信息，默认为null
+        //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0 ; i < netNodeCount; i ++) {
             for (int j = 0 ; j < netNodeCount;j++) {
-                graph[i][j] = null;
+                graph[i][j] = NO_PATH_WEIGHT;
             }
         }
 
@@ -252,7 +266,7 @@ public class Deploy {
      * 网络节点链路图的类
      * 图中边的权值信息，包括总带宽费用，网络租用费
      */
-    private static class Weight{
+    public static class Weight{
         //总带宽费用
         private int totalBandwidth;
         //网络租用费
