@@ -1,10 +1,7 @@
 package com.cacheserverdeploy.deploy;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 public class Deploy {
     /**
@@ -155,6 +152,7 @@ public class Deploy {
     /**
      * 1. 生成树节点排序（排序规则，度从大到小）
      * 2. 在度最大的点上 添加服务器
+     *
      * 3. 找出服务器到各个消费点的路径上最小的流量值
      * 4. 如果该路径的最小的流量值大于等于消费节点所需的带宽，则选择该路径，并记录
      * 5. 如果该路径的最小的流量值小于消费节点的带宽，则依旧选择该路径，消费节点所需要的带宽减去最小的流量值，并记录
@@ -163,7 +161,7 @@ public class Deploy {
      * @param mst 一个生成树类型的变量，不是String
      * @return 所有服务器的ID
      */
-    public static int[] getDeployment(String mst) {
+    public static int[] getDeployment(Map<Integer,ArrayList<Integer>> mst) {
 
         return new int[]{};
     }
