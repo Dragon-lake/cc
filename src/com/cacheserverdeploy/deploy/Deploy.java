@@ -57,7 +57,17 @@ public class Deploy {
 
         }
 
+//        solveQuestion();
+
+
         return result;
+    }
+
+
+    public static void solveQuestion(){
+        Map<Integer,ArrayList<Integer>> mst = createMST(0);
+        int[] node = sortMSTNode(mst);
+        getDeployment(node);
     }
 
     /**
