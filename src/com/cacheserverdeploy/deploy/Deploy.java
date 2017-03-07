@@ -43,7 +43,13 @@ public class Deploy {
         /**do your work here**/
         initData(graphContent);
         printMST(0);
-        return new String[]{"17", "\r\n", "0 8 0 20"};
+        String [] result = new String[consumptionNodeCount + 2];
+        result[0] = consumptionNodeCount + "";
+        result[1] = "";
+        for (int i = 2 ; i < result.length;i++) {
+            result[i] = consumptionInfo.get(i - 2).getLinkedID() + " " + i + " " + 0;
+        }
+        return result;
     }
 
     /**
