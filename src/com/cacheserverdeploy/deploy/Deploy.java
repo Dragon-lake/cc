@@ -25,6 +25,9 @@ public class Deploy {
     //网络链路图的带权图的邻接矩阵
     private static Weight[][] graph;
 
+    //生成树的邻接矩阵存储
+    private static Weight[][] MSTgraph;
+
     /*消费节点与相连网络节点的信息存储
       存储的格式如下：Map<Integer,ConsumptionNodeInfo>
       map中key是消费节点，value是相连的网络节点的ID与需要的带宽
@@ -42,10 +45,15 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
+        int [] orders = getDeployment(createMST(0));
+        for (int i = 0 ; i <orders.length;i++) {
+            System.out.print(orders[i] + " ");
+        }
+        System.out.println();
         String [] result = new String[consumptionNodeCount + 2];
         result[0] = consumptionNodeCount + "";
         result[1] = "\n";
-        for (int i = 0 ; i < result.length;i++) {
+        for (int i = 0 ; i < consumptionNodeCount;i++) {
             result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
         }
         return result;
@@ -72,7 +80,6 @@ public class Deploy {
         //保存剩余顶点到当前生成树权值最小的边的顶点
         int k = 0;
 //        //保存生成树的邻接矩阵
-//        Weight[][] minTree = new Weight[netNodeCount][netNodeCount];
         //保存被并入生成树的节点的前驱节点（邻接点）
         int[] preset = new int[netNodeCount];
 
@@ -85,7 +92,7 @@ public class Deploy {
             vset[i] = 0;
             preset[i] = start;
 
-            ArrayList<Integer> a = new ArrayList();
+            ArrayList<Integer> a = new ArrayList<>();
             mst.put(i, a);
         }
         //起始节点被并入生成树
@@ -107,6 +114,7 @@ public class Deploy {
             v = k;
 //                //把边k和其前驱节点连接的边保存到生成树
 //                minTree[preset[k]][k] = min;
+            MSTgraph[preset[k]][k] = min;
 
             mst.get(preset[v]).add(v);
 
@@ -165,8 +173,20 @@ public class Deploy {
      * @return 所有服务器的ID
      */
     public static int[] getDeployment(Map<Integer,ArrayList<Integer>> mst) {
-
-        return new int[]{};
+        List<Map.Entry<Integer, ArrayList<Integer>>> list = new ArrayList<>(
+                mst.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Integer, ArrayList<Integer>>>() {
+            public int compare(Map.Entry<Integer, ArrayList<Integer>> o1, Map.Entry<Integer, ArrayList<Integer>> o2) {
+                return (o2.getValue().size() - o1.getValue().size());
+            }
+        });
+        int i = 0;
+        int[] keySortedByDegree = new int[mst.size()];
+        for (Map.Entry<Integer, ArrayList<Integer>> newEntry : list) {
+            keySortedByDegree[i++]=newEntry.getKey();
+        }
+        // ArrayList中元素是有序的
+        return keySortedByDegree;
     }
 
     /**
@@ -202,11 +222,13 @@ public class Deploy {
 
         //构造图
         graph = new Weight[netNodeCount][netNodeCount];
+        MSTgraph = new Weight[netNodeCount][netNodeCount];
 
         //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 graph[i][j] = NO_PATH_WEIGHT;
+                MSTgraph[i][j] = NO_PATH_WEIGHT;
             }
         }
 
