@@ -42,12 +42,11 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-        printMST(0);
         String [] result = new String[consumptionNodeCount + 2];
         result[0] = consumptionNodeCount + "";
-        result[1] = "";
-        for (int i = 2 ; i < result.length;i++) {
-            result[i] = consumptionInfo.get(i - 2).getLinkedID() + " " + i + " " + 0;
+        result[1] = "\n";
+        for (int i = 0 ; i < result.length;i++) {
+            result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
         }
         return result;
     }
@@ -85,16 +84,14 @@ public class Deploy {
             lowcost[i] = graph[start][i];
             vset[i] = 0;
             preset[i] = start;
+
+            ArrayList<Integer> a = new ArrayList();
+            mst.put(i, a);
         }
         //起始节点被并入生成树
         vset[start] = 1;
 
-        for (int m = 0; m < netNodeCount; m++) {
-            ArrayList<Integer> a = new ArrayList();
-            mst.put(m, a);
-        }
-
-        for (int i = 0; i < netNodeCount; i++) {
+        for (int i = 1; i < netNodeCount; i++) {
 
             min = NO_PATH_WEIGHT;
 
@@ -113,14 +110,14 @@ public class Deploy {
 
             mst.get(preset[v]).add(v);
 
-            //检查所有节点是否并入生成树中
-            int result = vset[0];
-            for (int n = 1; n < netNodeCount; n++) {
-                result &= vset[n];
-            }
-            if (result == 1) {
-                break;
-            }
+//            //检查所有节点是否并入生成树中
+//            int result = vset[0];
+//            for (int n = 1; n < netNodeCount; n++) {
+//                result &= vset[n];
+//            }
+//            if (result == 1) {
+//                break;
+//            }
 
             //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
             for (int l = 0; l < netNodeCount; l++) {
