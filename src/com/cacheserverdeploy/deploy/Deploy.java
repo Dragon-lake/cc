@@ -42,8 +42,17 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-        printMST(0);
-        return new String[]{"17", "\r\n", "0 8 0 20"};
+//        printMST(0);
+        String [] result = new String[netNodeCount + 2];
+        result[0] = consumptionNodeCount + "";
+        result[1] = "\r\n";
+        int count = 2;
+        for (int i = 0 ; i < consumptionNodeCount;i++) {
+            result[count++] = consumptionInfo.get(i).getLinkedID() + " " + (i) + " " + consumptionInfo.get(i).getRequiredBandWidth();
+        }
+        
+        return result;
+//        return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
     /**
