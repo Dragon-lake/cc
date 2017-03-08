@@ -25,13 +25,21 @@ public class Deploy {
     //网络链路图的带权图的邻接矩阵
     private static Weight[][] graph;
 
+    //生成树的邻接矩阵存储
+    private static Weight[][] MSTgraph;
+
+    //BFS中的顺序数组
+    private static int[] orderInBFs;
+
+    private static List<Queue<Integer>> paths;
+
     /*消费节点与相连网络节点的信息存储
       存储的格式如下：Map<Integer,ConsumptionNodeInfo>
       map中key是消费节点，value是相连的网络节点的ID与需要的带宽
      */
     private static Map<Integer, ConsumptionNodeInfo> consumptionInfo;
 
-    //表示不可达的常亮
+    //表示不可达的常量
     private static Weight NO_PATH_WEIGHT = new Weight();
 
     static {
@@ -39,153 +47,208 @@ public class Deploy {
         NO_PATH_WEIGHT.setNetRentCost(101);
     }
 
+
+
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-//        printMST(0);
-        String [] result = new String[netNodeCount + 2];
+        String[] result = new String[consumptionNodeCount + 2];
         result[0] = consumptionNodeCount + "";
-        result[1] = "\r\n";
-        int count = 2;
-        for (int i = 0 ; i < consumptionNodeCount;i++) {
-            result[count++] = consumptionInfo.get(i).getLinkedID() + " " + (i) + " " + consumptionInfo.get(i).getRequiredBandWidth();
+        result[1] = "";
+        for (int i = 0; i < consumptionNodeCount; i++) {
+            if (i != consumptionNodeCount - 1) {
+                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
+            } else {
+                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
+            }
+
         }
-        
+
+        solveQuestion();
         return result;
-//        return new String[]{"17", "\r\n", "0 8 0 20"};
     }
 
-    /**
-     * 生成最小生成树（以邻接矩阵存储）
-     * 生成树的策略从一个点 看其相连的边，在边的全值中，选择 网络租用费用最低，流量最大。
-     * 生成树的结构 由实现人决定
-     *
-     * @param start
-     * @return 返回生成树
-     */
-    public static Map<Integer, ArrayList<Integer>> createMST(int start) {
 
-        //保存当前生成树到到剩余各顶点最小的weight值
-        Weight[] lowcost = new Weight[netNodeCount];
-        //顶点i是否被并入生成树中
-        int[] vset = new int[netNodeCount];
-        //最小值
-        Weight min = NO_PATH_WEIGHT;
-        //保存新加入生成树的节点
-        int v = 0;
-        //保存剩余顶点到当前生成树权值最小的边的顶点
-        int k = 0;
-//        //保存生成树的邻接矩阵
-//        Weight[][] minTree = new Weight[netNodeCount][netNodeCount];
-        //保存被并入生成树的节点的前驱节点（邻接点）
-        int[] preset = new int[netNodeCount];
-
-        //
-        Map<Integer, ArrayList<Integer>> mst = new HashMap<>(netNodeCount);
-
-        //初始化
-        for (int i = 0; i < netNodeCount; i++) {
-            lowcost[i] = graph[start][i];
-            vset[i] = 0;
-            preset[i] = start;
-        }
-        //起始节点被并入生成树
-        vset[start] = 1;
-
-        for (int m = 0; m < netNodeCount; m++) {
-            ArrayList<Integer> a = new ArrayList();
-            mst.put(m, a);
-        }
-
-        for (int i = 0; i < netNodeCount; i++) {
-
-            min = NO_PATH_WEIGHT;
-
-            //选出候选边中的最小者
-            for (int j = 0; j < netNodeCount; j++)
-                if (vset[j] == 0 && compareWeight(lowcost[j], min)) {
-                    min = lowcost[j];
-                    k = j;
-                }
-            //k并入生成树
-            vset[k] = 1;
-            //k设为中介节点
-            v = k;
-//                //把边k和其前驱节点连接的边保存到生成树
-//                minTree[preset[k]][k] = min;
-
-            mst.get(preset[v]).add(v);
-
-            //检查所有节点是否并入生成树中
-            int result = vset[0];
-            for (int n = 1; n < netNodeCount; n++) {
-                result &= vset[n];
-            }
-            if (result == 1) {
-                break;
-            }
-
-            //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
-            for (int l = 0; l < netNodeCount; l++) {
-
-                if (vset[l] == 0 && compareWeight(graph[v][l], lowcost[l])) {
-                    lowcost[l] = graph[v][l];
-                    preset[l] = v;
-                }
-
-            }
-
-
-        }
-        return mst;
+    public static void solveQuestion(){
+        Map<Integer,ArrayList<Integer>> mst = createMST(0);
+        int[] node = sortMSTNode(mst);
+        int[] results = getDeployment(node);
+//        for (int i = 0 ;i < results.length;i++) {
+//            System.out.print(results[i] + " ");
+//        }
     }
 
-    /**
-     * 比较两个weight的大小
-     *
-     * @return 前者比后者小，返回TRUE，否则返回FALSE
-     * @param两个weight
-     */
-    public static boolean compareWeight(Weight weight1, Weight weight2) {
-
-        if (weight1.getNetRentCost() < weight2.getNetRentCost()) return true;
-        else if (weight1.getNetRentCost() > weight2.getNetRentCost()) return false;
-        else {
-            if (weight1.getTotalBandwidth() > weight2.getTotalBandwidth()) return true;
-        }
-
-        return false;
-    }
 
 
     /**
      * 1. 生成树节点排序（排序规则，度从大到小）
      * 2. 在度最大的点上 添加服务器
-     *
+     * <p>
      * 3. 找出服务器到各个消费点的路径上最小的流量值
      * 4. 如果该路径的最小的流量值大于等于消费节点所需的带宽，则选择该路径，并记录
      * 5. 如果该路径的最小的流量值小于消费节点的带宽，则依旧选择该路径，消费节点所需要的带宽减去最小的流量值，并记录
      * 6.
      *
-     * @param mst 一个生成树类型的变量，不是String
+     * @param node 一组排序好的生成树节点
      * @return 所有服务器的ID
      */
-    public static int[] getDeployment(Map<Integer,ArrayList<Integer>> mst) {
+    public static int[] getDeployment(int[] node) {
 
-        return new int[]{};
+        int serverID = node[0];
+        int [] orders = doBFSInMST(serverID);
+
+        //与消费节点相连的网络节点
+        int[] netNodes = new int[consumptionNodeCount];
+        int count = 0;
+        //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
+        for (int i = 0 ; i < orderInBFs.length;i++) {
+            for (int j = 0 ; j < consumptionNodeCount;j++) {
+                if (orderInBFs[i] == consumptionInfo.get(j).getLinkedID()) {
+                    netNodes[count++] = orderInBFs[i];
+                }
+            }
+        }
+        isSatisfyAllConsumptionNode(serverID, netNodes,orders);
+        return netNodes;
+
+    }
+
+
+    /**
+     *
+     * @param beginNode 在生成树中进行BFS时的起始节点
+     * @return 数组，该数组下标是网络节点的序号，数组的值是该网络节点层次遍历时的前驱节点
+     */
+    public static int[] doBFSInMST(int beginNode) {
+        int count = 0;
+        int[] orders = new int[netNodeCount];
+        for (int i = 0; i < netNodeCount; i++) {
+            orders[i] = -1;
+        }
+
+        boolean[] visited = new boolean[netNodeCount];
+        for (int i = 0 ;i < netNodeCount;i++) {
+            visited[i] = false;
+        }
+
+        Queue<Integer> queue = new LinkedList<Integer>();
+        queue.offer(beginNode);
+        orderInBFs[count++] = beginNode;
+        visited[beginNode] = true;
+
+        while (!queue.isEmpty()) {
+            int current = queue.poll();
+            for (int i = 0 ;i < netNodeCount;i++) {
+                if (current == i) {
+                    continue;
+                }
+                if (isLinked(MSTgraph, current, i)) {
+                    if (!visited[i]) {
+                        queue.offer(i);
+                        orderInBFs[count++] = i;
+                        orders[i] = current;
+                        visited[i] = true;
+                    }
+                }
+            }
+        }
+        return orders;
+    }
+
+
+    /**
+     * 对生成树的节点进行排序，排序的原则是按照度从大到小
+     *
+     * @param mst 一个生成树
+     * @return 返回排序后的生成树的节点数组
+     */
+    public static int[] sortMSTNode(Map<Integer, ArrayList<Integer>> mst) {
+        List<Map.Entry<Integer, ArrayList<Integer>>> list = new ArrayList<Map.Entry<Integer, ArrayList<Integer>>>(
+                mst.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<Integer, ArrayList<Integer>>>() {
+            public int compare(Map.Entry<Integer, ArrayList<Integer>> o1, Map.Entry<Integer, ArrayList<Integer>> o2) {
+                return (o2.getValue().size() - o1.getValue().size());
+            }
+        });
+        int i = 0;
+        int[] keySortedByDegree = new int[mst.size()];
+        for (Map.Entry<Integer, ArrayList<Integer>> newEntry : list) {
+            keySortedByDegree[i++] = newEntry.getKey();
+        }
+        // ArrayList中元素是有序的
+        return keySortedByDegree;
     }
 
     /**
      * 1. 按照生成树去判断服务器能不能走到消费节点
      * 2. 如果全部能走到，则返回true
-     * 3. 判断能不能走到的策略:判断服务节点去消费节点的唯一路径是否满足带宽需求，满足就能走到。
-     * 4. 如果不能全部走到，保存不能走到的消费节点，假设不加服务器，加边()
-     * 5. 加边的策略：消费节点所需带宽-最小生成树中的边的带宽 走费用最小的带宽最大的，从下往上走
      *
-     * @param serverID 一组服务器的ID
+     *
+     * @param serverID 服务器的ID
+     * @param  netNodes 消费节点相邻的网络节点
+     * @param  orders 在生成树中点的前驱节点
      * @return true 如果部署的服务器能满足所有的消费节点。false 不满足
      */
-    public static boolean isSatisfyAllConsumptionNode(int[] serverID) {
+    public static boolean isSatisfyAllConsumptionNode(int serverID,int [] netNodes,int[] orders) {
+
+        //表示消费节点是否被满足
+        int[] satisfiedComsumptionNode=new int[consumptionNodeCount];
+
+        for (int i = 0 ; i < netNodes.length;i++) {
+            //得到消费节点到服务节点的一个路径，若满足，则minBandWidth = 消费节点需求的带宽。若不满足，则minBandWidth = 该路径最短的带宽
+            int cursor = netNodes[i];
+            int requiredBandWidth = consumptionInfo.get(netNodes[i]).getRequiredBandWidth();
+            int minBandWidth = 101;
+            Queue<Integer> successQueue = new LinkedList<Integer>();
+            Queue<Integer> failQueue = new LinkedList<Integer>();
+            successQueue.offer(cursor);
+            failQueue.offer(cursor);
+            while (orders[cursor] != -1 && satisfiedComsumptionNode[netNodes[i]]!=1) {
+
+                //生成树矩阵
+                int totalBandWidth = MSTgraph[cursor][orders[cursor]].getTotalBandwidth();
+                int usedBandWidth = MSTgraph[cursor][orders[cursor]].getUsedBandWidth();
+
+                if(minBandWidth>totalBandWidth && totalBandWidth > usedBandWidth){
+                    minBandWidth=totalBandWidth;
+                }
+                if(totalBandWidth <= usedBandWidth){
+                    successQueue=null;
+                    break;
+                }
+                successQueue.offer(orders[cursor]);
+                cursor=orders[cursor];
+//                if (totalBandWidth >= requiredBandWidth && isConnected) {
+//                    minBandWidth = requiredBandWidth;
+//                    successQueue.offer(orders[cursor]);
+//
+//                }else{
+//                    failQueue.offer(orders[cursor]);
+//                    minBandWidth = Math.min(minBandWidth,totalBandWidth);
+//                    isConnected = false;
+//
+//                }
+
+
+
+            }
+
+            if(successQueue!=null){
+                paths.add(successQueue);
+                if(minBandWidth>requiredBandWidth) {
+                    satisfiedComsumptionNode[netNodes[i]]=1;
+                }
+                //路径上各边-minBandWidth
+            }
+//
+//            if (isConnected) {
+//                successQueue.offer(serverID);
+//                paths.add(successQueue);
+//            }else{
+//
+//            }
+//
+        }
         return false;
     }
 
@@ -208,11 +271,15 @@ public class Deploy {
 
         //构造图
         graph = new Weight[netNodeCount][netNodeCount];
+        MSTgraph = new Weight[netNodeCount][netNodeCount];
+        orderInBFs = new int[netNodeCount];
+        paths = new LinkedList<Queue<Integer>>();
 
         //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 graph[i][j] = NO_PATH_WEIGHT;
+                MSTgraph[i][j] = NO_PATH_WEIGHT;
             }
         }
 
@@ -245,7 +312,7 @@ public class Deploy {
         //读取消费节点信息
         lineNum++;
         int count = consumptionNodeCount;
-        consumptionInfo = new HashMap<>(consumptionNodeCount);
+        consumptionInfo = new HashMap<Integer, ConsumptionNodeInfo>(consumptionNodeCount);
 
         while (count-- > 0) {
             String[] infos = lineTos(graphContent[lineNum++]);
@@ -259,6 +326,125 @@ public class Deploy {
             consumptionInfo.put(consumptionID, info);
         }
 
+    }
+
+    /**
+     * 给定一幅无向图的邻接矩阵，和矩阵的2个下标，判断该2点是否相连
+     * @param graph
+     * @param start
+     * @param end
+     * @return
+     */
+    public static boolean isLinked(Weight[][] graph, int start, int end) {
+        if (graph[start][end].getNetRentCost() < NO_PATH_WEIGHT.getNetRentCost() &&
+                graph[start][end].getTotalBandwidth() > NO_PATH_WEIGHT.getTotalBandwidth() &&
+                graph[end][start].getNetRentCost() < NO_PATH_WEIGHT.getNetRentCost() &&
+                graph[end][start].getTotalBandwidth() > NO_PATH_WEIGHT.getTotalBandwidth()){
+            return true;
+        }else{
+            return false;
+        }
+    }
+
+    /**
+     * 生成最小生成树（以邻接矩阵存储）
+     * 生成树的策略从一个点 看其相连的边，在边的全值中，选择 网络租用费用最低，流量最大。
+     * 生成树的结构 由实现人决定
+     *
+     * @param start
+     * @return 返回生成树
+     */
+    public static Map<Integer, ArrayList<Integer>> createMST(int start) {
+
+        //保存当前生成树到到剩余各顶点最小的weight值
+        Weight[] lowcost = new Weight[netNodeCount];
+        //顶点i是否被并入生成树中
+        int[] vset = new int[netNodeCount];
+        //最小值
+        Weight min = NO_PATH_WEIGHT;
+        //保存新加入生成树的节点
+        int v = 0;
+        //保存剩余顶点到当前生成树权值最小的边的顶点
+        int k = 0;
+//        //保存生成树的邻接矩阵
+        //保存被并入生成树的节点的前驱节点（邻接点）
+        int[] preset = new int[netNodeCount];
+
+        //
+        Map<Integer, ArrayList<Integer>> mst = new HashMap<Integer, ArrayList<Integer>>(netNodeCount);
+
+        //初始化
+        for (int i = 0; i < netNodeCount; i++) {
+            lowcost[i] = graph[start][i];
+            vset[i] = 0;
+            preset[i] = start;
+
+            ArrayList<Integer> a = new ArrayList<Integer>();
+            mst.put(i, a);
+        }
+        //起始节点被并入生成树
+        vset[start] = 1;
+
+        for (int i = 1; i < netNodeCount; i++) {
+
+            min = NO_PATH_WEIGHT;
+
+            //选出候选边中的最小者
+            for (int j = 0; j < netNodeCount; j++)
+                if (vset[j] == 0 && compareWeight(lowcost[j], min)) {
+                    min = lowcost[j];
+                    k = j;
+                }
+            //k并入生成树
+            vset[k] = 1;
+            //k设为中介节点
+            v = k;
+//                //把边k和其前驱节点连接的边保存到生成树
+//                minTree[preset[k]][k] = min;
+            MSTgraph[preset[k]][k] = min;
+            MSTgraph[k][preset[k]] = min;
+            mst.get(preset[v]).add(v);
+
+//            //检查所有节点是否并入生成树中
+//            int result = vset[0];
+//            for (int n = 1; n < netNodeCount; n++) {
+//                result &= vset[n];
+//            }
+//            if (result == 1) {
+//                break;
+//            }
+
+            //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
+            for (int l = 0; l < netNodeCount; l++) {
+
+                if (vset[l] == 0 && compareWeight(graph[v][l], lowcost[l])) {
+                    lowcost[l] = graph[v][l];
+                    preset[l] = v;
+                }
+
+            }
+
+
+        }
+        return mst;
+    }
+
+    /**
+     * 比较两个weight的大小，优先比较网络租用费。网络租用费低，则weight小。
+     * 如果网络租用费一致，则比较总带宽，总带宽大的，则weight小
+     *
+     * @return 前者比后者小，返回TRUE，否则返回FALSE
+     * @param两个weight
+     */
+    public static boolean compareWeight(Weight weight1, Weight weight2) {
+
+        if (weight1.getNetRentCost() < weight2.getNetRentCost()) return true;
+        else if (weight1.getNetRentCost() > weight2.getNetRentCost()) return false;
+        else {
+            if (weight1.getTotalBandwidth() > weight2.getTotalBandwidth()) return true;
+        }
+
+        return false;
     }
 
 
@@ -353,7 +539,7 @@ public class Deploy {
     }
 
 
-    public static void printMST(int start){
+    public static void printMST(int start) {
         Map<Integer, ArrayList<Integer>> map = createMST(start);
         Iterator iterator = map.entrySet().iterator();
         while (iterator.hasNext()) {
