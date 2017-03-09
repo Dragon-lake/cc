@@ -31,7 +31,7 @@ public class Deploy {
     //BFS中的顺序数组
     private static int[] orderInBFs;
 
-    private static List<Stack<Integer>> paths;
+    private static List<LinkedList<Integer>> paths;
 
     /*消费节点与相连网络节点的信息存储
       存储的格式如下：Map<Integer,ConsumptionNodeInfo>
@@ -39,10 +39,16 @@ public class Deploy {
      */
     private static Map<Integer, ConsumptionNodeInfo> consumptionInfo;
     //存储的是网络节点与消费节点的映射
-    private static Map<Integer,Integer> consumptionNetMap;
+    private static Map<Integer, Integer> consumptionNetMap;
+
+    //初始的MST
+    private static Weight[][] initMST;
 
 
-    private static int[] satisfiedComsumptionNode;
+    //满足的服务器的列表
+    private static ArrayList<Integer> severList;
+    //满足的消费点的列表
+    private static ArrayList<Integer> satisfiedComsumptionNode;
 
     //表示不可达的常量
     private static Weight NO_PATH_WEIGHT = new Weight();
@@ -56,28 +62,150 @@ public class Deploy {
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
         initData(graphContent);
-//        String[] result = new String[consumptionNodeCount + 2];
-//        result[0] = consumptionNodeCount + "";
-//        result[1] = "";
-//        for (int i = 0; i < consumptionNodeCount; i++) {
-//            if (i != consumptionNodeCount - 1) {
-//                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
-//            } else {
-//                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
-//            }
-//
-//        }
         return solveQuestion();
+
+//        int a = sToi(lineTos(graphContent[0])[2]);
+//        int b = sToi(lineTos(graphContent[0])[1]);
+//        String [] result = new String[a + 2];
+//        result[0] = a + "";
+//        result[1] = "";
+//        for (int i = 0 ; i < a ;i++) {
+//            String[] c = lineTos(graphContent[b + 5 + i]);
+//            result[2 + i] = c[1] + " " + i + " " + c[2];
+//        }
+//        return result;
+
     }
 
+    /**
+     * 1. 根据邻接矩阵，生成一个最小生成树
+     *
+     * @return 输出结果
+     * @see Deploy#createMST(int)
+     * 2. 对最小生成树的节点，按照度的大小进行排序
+     * @see Deploy#sortMSTNode(Map)
+     * 3. 在排序好的数组中，选择度最大的点，，也就是下标0的点，暂定为服务器
+     * 4. 判断该服务器，是否至少满足一个消费节点。
+     * @see Deploy#isSatisfyConsumptionNode(int, int[], int[])
+     * 5. 如果满足，则判断所有的消费节点是否全部满足，如果都满足。则return 输出，如果不能全部满足，则生成残图，并跳转到第一步，再次执行
+     * @see Deploy#generateRemainGraph()
+     * 6. 如果不满足，则跳到第三步，下标为1的点，暂定为服务器，依次类推。
+     */
 
     public static String[] solveQuestion() {
-        Map<Integer, ArrayList<Integer>> mst = createMST(0);
-        int[] node = sortMSTNode(mst);
-        return getDeployment(node);
+//        while (isSatisfyAllConsumptionNodes()) {
+//
+//        }
+
+        while (!isSatisfyAllConsumptionNodes()) {
+            Map<Integer, ArrayList<Integer>> mst = createMST(0);
+            int[] node = sortMSTNode(mst);
+            for (int i = 0; i < node.length; i++) {
+                if (severList.contains(node[i])) {
+                    continue;
+                }
+                int serverID = node[i];
+                int[] orders = doBFSInMST(serverID);
+
+                //与消费节点相连的网络节点
+                int[] netNodes = new int[consumptionNodeCount];
+                int count = 0;
+                //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
+                for (int k = 0; k < orderInBFs.length; k++) {
+                    for (int j = 0; j < consumptionNodeCount; j++) {
+                        if (orderInBFs[k] == consumptionInfo.get(j).getLinkedID()) {
+                            netNodes[count++] = orderInBFs[k];
+                        }
+                    }
+                }
+                if (!isSatisfyConsumptionNode(serverID, netNodes, orders)) {
+                } else {
+                    break;
+                }
+
+            }
+            generateRemainGraph();
+        }
+
+//        doOptimization();
+        String[] result = new String[2 + paths.size()];
+        result[0] = paths.size() + "";
+        result[1] = "";
+        for (int i = 0; i < paths.size(); i++) {
+            StringBuffer sb = new StringBuffer();
+            LinkedList<Integer> path = paths.get(i);
+            for (int j = path.size() - 1; j >= 0; j--) {
+                if (j != 0) {
+                    sb.append(path.get(j) + " ");
+                } else {
+                    sb.append(path.get(j));
+                }
+            }
+//            while (path.size() != 0) {
+//                if (path.size() != 1) {
+//                    sb.append(path.pop()).append(" ");
+//                } else {
+//                    sb.append(path.pop());
+//                }
+//            }
+            result[i + 2] = sb.toString();
+        }
+        return result;
+//        int[] orders = doBFSInMST(node[0]);
+//        for (int i = 0 ; i < orders.length;i++) {
+//            System.out.print(orders[i] + " ");
+//        }
+//        return new String[]{};
+//        return getDeployment(node);
 //        for (int i = 0 ;i < results.length;i++) {
 //            System.out.print(results[i] + " ");
 //        }
+    }
+
+    /**
+     * 对选路出的结果进行优化
+     */
+    private static void doOptimization() {
+        List<LinkedList<Integer>> tmp = paths;
+        for (int g = 0; g < tmp.size(); g++) {
+            LinkedList<Integer> item = tmp.get(g);
+            for (int i = item.size() - 1; i > 1; i--) {
+                if (severList.contains(item.get(i))) {
+                    for (int j = item.size() - 1; j > i; j--) {
+                        item.remove(j);
+                    }
+                }
+            }
+        }
+
+        for (int i = 0; i < paths.size(); i++) {
+            for (int j = i + 1; j < paths.size(); j++) {
+                if (isEqualOfTwoList(tmp.get(i), tmp.get(j))) {
+                    int value1 = tmp.get(i).get(0);
+                    int value2 = tmp.get(j).get(0);
+                    tmp.get(j).set(0, value1 + value2);
+                    tmp.remove(i);
+                }
+            }
+        }
+
+        paths = tmp;
+
+    }
+
+
+    public static boolean isEqualOfTwoList(List<Integer> l1, List<Integer> l2) {
+        if (l1.size() != l2.size()) {
+            return false;
+        }
+
+        for (int i = 1; i < l1.size(); i++) {
+            if (!l1.get(i).equals(l2.get(i))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
 
@@ -93,44 +221,44 @@ public class Deploy {
      * @param node 一组排序好的生成树节点
      * @return 所有服务器的ID
      */
-    public static String[] getDeployment(int[] node) {
-
-        int serverID = node[0];
-        int[] orders = doBFSInMST(serverID);
-
-        //与消费节点相连的网络节点
-        int[] netNodes = new int[consumptionNodeCount];
-        int count = 0;
-        //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
-        for (int i = 0; i < orderInBFs.length; i++) {
-            for (int j = 0; j < consumptionNodeCount; j++) {
-                if (orderInBFs[i] == consumptionInfo.get(j).getLinkedID()) {
-                    netNodes[count++] = orderInBFs[i];
-                }
-            }
-        }
-        if (isSatisfyAllConsumptionNode(serverID, netNodes, orders)){
-            System.out.println("全部满足");
-        }
-
-        String [] result = new String[2 + paths.size()];
-        result[0] = paths.size() + "";
-        result[1] = "";
-        for (int i = 0 ; i < paths.size();i++) {
-            StringBuffer sb = new StringBuffer();
-            Stack<Integer> path = paths.get(i);
-            while (path.size() != 0) {
-                if (path.size() != 1) {
-                    sb.append(path.pop() + " ");
-                }else{
-                    sb.append(path.pop());
-                }
-            }
-            result[i + 2] = sb.toString();
-        }
-        return result;
-
-    }
+//    public static String[] getDeployment(int[] node) {
+//
+//        int serverID = node[0];
+//        int[] orders = doBFSInMST(serverID);
+//
+//        //与消费节点相连的网络节点
+//        int[] netNodes = new int[consumptionNodeCount];
+//        int count = 0;
+//        //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
+//        for (int i = 0; i < orderInBFs.length; i++) {
+//            for (int j = 0; j < consumptionNodeCount; j++) {
+//                if (orderInBFs[i] == consumptionInfo.get(j).getLinkedID()) {
+//                    netNodes[count++] = orderInBFs[i];
+//                }
+//            }
+//        }
+//        if (isSatisfyConsumptionNode(serverID, netNodes, orders)) {
+//            System.out.println("全部满足");
+//        }
+//
+//        String[] result = new String[2 + paths.size()];
+//        result[0] = paths.size() + "";
+//        result[1] = "";
+//        for (int i = 0; i < paths.size(); i++) {
+//            StringBuffer sb = new StringBuffer();
+//            Stack<Integer> path = paths.get(i);
+//            while (path.size() != 0) {
+//                if (path.size() != 1) {
+//                    sb.append(path.pop() + " ");
+//                } else {
+//                    sb.append(path.pop());
+//                }
+//            }
+//            result[i + 2] = sb.toString();
+//        }
+//        return result;
+//
+//    }
 
 
     /**
@@ -204,12 +332,15 @@ public class Deploy {
      * @param serverID 服务器的ID
      * @param netNodes 消费节点相邻的网络节点
      * @param orders   在生成树中点的前驱节点
-     * @return true 如果部署的服务器能满足所有的消费节点。false 不满足
+     * @return true 如果部署的服务器至少满足一个的消费节点。false 不满足
      */
-    public static boolean isSatisfyAllConsumptionNode(int serverID, int[] netNodes, int[] orders) {
+    public static boolean isSatisfyConsumptionNode(int serverID, int[] netNodes, int[] orders) {
 
-        //表示消费节点是否被满足
-        satisfiedComsumptionNode = new int[consumptionNodeCount];
+        boolean isSatisfy = false;
+
+        //保存状态，以便回滚
+        Weight[][] tmpGraph = MSTgraph;
+        List<LinkedList<Integer>> lu = new ArrayList<LinkedList<Integer>>(netNodes.length);
 
         for (int i = 0; i < netNodes.length; i++) {
             //得到消费节点到服务节点的一个路径，若满足，则minBandWidth = 消费节点需求的带宽。若不满足，则minBandWidth = 该路径最短的带宽
@@ -217,10 +348,13 @@ public class Deploy {
             int requiredBandWidth = consumptionInfo.get(consumptionNetMap.get(netNodes[i])).getRequiredBandWidth();
             int minBandWidth = 101;
             Queue<Integer> successQueue = new LinkedList<Integer>();
-            Queue<Integer> failQueue = new LinkedList<Integer>();
-            successQueue.offer(cursor);
-            failQueue.offer(cursor);
-            while (orders[cursor] != -1 && satisfiedComsumptionNode[consumptionNetMap.get(netNodes[i])] != 1) {
+
+            if (!satisfiedComsumptionNode.contains(consumptionNetMap.get(netNodes[i]))) {
+                successQueue.offer(cursor);
+            } else {
+                continue;
+            }
+            while (cursor != serverID && !satisfiedComsumptionNode.contains(consumptionNetMap.get(netNodes[i]))) {
 
                 //生成树矩阵
                 int totalBandWidth = MSTgraph[cursor][orders[cursor]].getTotalBandwidth();
@@ -245,45 +379,74 @@ public class Deploy {
 //                    isConnected = false;
 //
 //                }
-
             }
+
+//            if (successQueue != null && successQueue.peek() != serverID) {
+//                successQueue.offer(serverID);
+//            }
 
             if (successQueue != null) {
-                Stack<Integer> path = new Stack<Integer>();
-                if (minBandWidth > requiredBandWidth) {
-                    satisfiedComsumptionNode[consumptionNetMap.get(netNodes[i])] = 1;
+                LinkedList<Integer> path = new LinkedList<Integer>();
+                if (minBandWidth >= requiredBandWidth) {
+                    isSatisfy = true;
+                    satisfiedComsumptionNode.add(consumptionNetMap.get(netNodes[i]));
+                    severList.add(serverID);
+                    minBandWidth = requiredBandWidth;
                 }
+                //设置消费节点还需带宽
+                ConsumptionNodeInfo info = consumptionInfo.get(consumptionNetMap.get(netNodes[i]));
+                consumptionInfo.get(consumptionNetMap.get(netNodes[i])).setRequiredBandWidth(info.getRequiredBandWidth() - minBandWidth);
+
+
                 //设置生成树邻接矩阵上的usedBandWidth是minBandWidth
                 //将队列中的元素，依次出队，放入放入栈中，就是最终的路线
-                path.push(minBandWidth);
-                path.push(consumptionNetMap.get(netNodes[i]));
-                Queue<Integer> tmp = successQueue;
+
+                path.add(minBandWidth);
+                path.add(consumptionNetMap.get(netNodes[i]));
                 int start, end;
-                start = tmp.poll();
-                path.push(start);
-                for (int j = 0; j < tmp.size(); j++) {
-                    end = tmp.poll();
-                    path.push(end);
-                    MSTgraph[start][end].setUsedBandWidth(minBandWidth);
-                    MSTgraph[end][start].setUsedBandWidth(minBandWidth);
+                start = successQueue.poll();
+                path.add(start);
+                while (successQueue.size() != 0) {
+                    end = successQueue.poll();
+                    path.add(end);
+                    MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
+                    MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
                     start = end;
                 }
-                paths.add(path);
+                lu.add(path);
             }
 
+
         }
 
-        int isEnd = satisfiedComsumptionNode[0];
-        for (int i = 0 ; i < satisfiedComsumptionNode.length;i++) {
-            isEnd &= satisfiedComsumptionNode[i];
+        if (isSatisfy) {
+            paths.addAll(lu);
+        } else {
+            MSTgraph = tmpGraph;
         }
-        if (isEnd == 1) {
-            return true;
-        }else {
-            return false;
-        }
+
+        return isSatisfy;
+
     }
 
+
+    public static boolean isSatisfyAllConsumptionNodes() {
+        return satisfiedComsumptionNode.size() == consumptionNodeCount;
+    }
+
+    public static void generateRemainGraph() {
+        for (int i = 0; i < netNodeCount; i++) {
+            for (int j = 0; j < netNodeCount; j++) {
+                if (isLinked(MSTgraph, i, j)) {
+                    graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
+                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
+                }
+            }
+        }
+
+        MSTgraph = initMST;
+
+    }
 
     /**
      * 处理图文本信息，构造图
@@ -305,7 +468,10 @@ public class Deploy {
         graph = new Weight[netNodeCount][netNodeCount];
         MSTgraph = new Weight[netNodeCount][netNodeCount];
         orderInBFs = new int[netNodeCount];
-        paths = new LinkedList<Stack<Integer>>();
+        paths = new LinkedList<LinkedList<Integer>>();
+        satisfiedComsumptionNode = new ArrayList<Integer>(consumptionNodeCount);
+        severList = new ArrayList<Integer>(netNodeCount);
+
 
         //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0; i < netNodeCount; i++) {
@@ -314,6 +480,7 @@ public class Deploy {
                 MSTgraph[i][j] = NO_PATH_WEIGHT;
             }
         }
+        initMST = MSTgraph;
 
         //判断网络节点的链接信息 是否读完
         boolean isNotEnd = true;
@@ -435,19 +602,9 @@ public class Deploy {
             //k设为中介节点
             v = k;
 //                //把边k和其前驱节点连接的边保存到生成树
-//                minTree[preset[k]][k] = min;
             MSTgraph[preset[k]][k] = min;
             MSTgraph[k][preset[k]] = min;
             mst.get(preset[v]).add(v);
-
-//            //检查所有节点是否并入生成树中
-//            int result = vset[0];
-//            for (int n = 1; n < netNodeCount; n++) {
-//                result &= vset[n];
-//            }
-//            if (result == 1) {
-//                break;
-//            }
 
             //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
             for (int l = 0; l < netNodeCount; l++) {
@@ -476,7 +633,8 @@ public class Deploy {
         if (weight1.getNetRentCost() < weight2.getNetRentCost()) return true;
         else if (weight1.getNetRentCost() > weight2.getNetRentCost()) return false;
         else {
-            if (weight1.getTotalBandwidth() > weight2.getTotalBandwidth()) return true;
+            if (weight1.getTotalBandwidth() - weight1.getUsedBandWidth() > weight2.getTotalBandwidth() - weight2.getUsedBandWidth())
+                return true;
         }
 
         return false;
