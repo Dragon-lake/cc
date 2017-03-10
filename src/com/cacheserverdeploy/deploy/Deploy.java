@@ -51,7 +51,7 @@ public class Deploy {
     private static ArrayList<Integer> satisfiedComsumptionNode;
 
     //表示不可达的常量
-    private static Weight NO_PATH_WEIGHT = new Weight();
+    private  static Weight NO_PATH_WEIGHT = new Weight();
 
     static {
         NO_PATH_WEIGHT.setTotalBandwidth(0);
@@ -84,7 +84,7 @@ public class Deploy {
         while (!isSatisfyAllConsumptionNodes()) {
             //从不满足消费节点相邻的网络节点创建生成树
             int start = 0;
-            for(int i = 0 ; i < consumptionNodeCount;i++) {
+            for (int i = 0; i < consumptionNodeCount; i++) {
                 if (!satisfiedComsumptionNode.contains(i)) {
                     start = consumptionInfo.get(i).getLinkedID();
                 }
@@ -93,7 +93,7 @@ public class Deploy {
             int[] node = sortMSTNode(mst);
             for (int i = 0; i < node.length; i++) {
                 if (severList.contains(node[i])) {
-                    continue;
+//                    continue;
                 }
                 int serverID = node[i];
                 int[] orders = doBFSInMST(serverID);
@@ -262,7 +262,7 @@ public class Deploy {
         boolean isSatisfy = false;
 
         //保存状态，以便回滚
-        Weight[][] tmpGraph = MSTgraph;
+        Weight[][] tmpGraph = cloneGraph(MSTgraph);
         List<LinkedList<Integer>> tmpPaths = new ArrayList<LinkedList<Integer>>(netNodes.length);
 
         for (int i = 0; i < netNodes.length; i++) {
@@ -283,8 +283,8 @@ public class Deploy {
                 int totalBandWidth = MSTgraph[cursor][orders[cursor]].getTotalBandwidth();
                 int usedBandWidth = MSTgraph[cursor][orders[cursor]].getUsedBandWidth();
 
-                if (minBandWidth > totalBandWidth && totalBandWidth > usedBandWidth) {
-                    minBandWidth = totalBandWidth;
+                if (minBandWidth > (totalBandWidth - usedBandWidth) && totalBandWidth > usedBandWidth) {
+                    minBandWidth = totalBandWidth - usedBandWidth;
                 }
                 if (totalBandWidth <= usedBandWidth) {
                     successQueue = null;
@@ -317,10 +317,10 @@ public class Deploy {
                 while (successQueue.size() != 0) {
                     end = successQueue.poll();
                     path.add(end);
-                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
+//                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
                         MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
                         MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
-                    }
+//                    }
                     start = end;
                 }
                 tmpPaths.add(path);
@@ -339,6 +339,32 @@ public class Deploy {
     }
 
 
+    /**
+     * 对graph进行克隆
+     *
+     * @param graph 图的邻接矩阵
+     * @return 克隆的图的邻接矩阵
+     */
+    public static Weight[][] cloneGraph(Weight[][] graph) {
+        Weight[][] newGraph = new Weight[graph.length][graph.length];
+        for (int i = 0; i < graph.length; i++) {
+            for (int j = 0; j < graph.length; j++) {
+                newGraph[i][j] = cloneWeight(graph[i][j]);
+            }
+        }
+
+        return newGraph;
+    }
+
+    public static Weight cloneWeight(Weight weight) {
+        Weight newWeight = new Weight();
+        newWeight.setUsedBandWidth(weight.getUsedBandWidth());
+        newWeight.setTotalBandwidth(weight.getTotalBandwidth());
+        newWeight.setNetRentCost(weight.getNetRentCost());
+        return newWeight;
+    }
+
+
     public static boolean isSatisfyAllConsumptionNodes() {
         return satisfiedComsumptionNode.size() == consumptionNodeCount;
     }
@@ -347,15 +373,15 @@ public class Deploy {
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
-                    if (graph[i][j].getUsedBandWidth() < graph[i][j].totalBandwidth) {
+//                    if (graph[i][j].getUsedBandWidth() < graph[i][j].totalBandwidth) {
                         graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
-                    }
+//                    }
 //                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
                 }
             }
         }
 
-        MSTgraph = initMST;
+        MSTgraph = cloneGraph(initMST);
 
     }
 
@@ -387,13 +413,11 @@ public class Deploy {
         //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
-                if (i != j) {
-                    graph[i][j] = NO_PATH_WEIGHT;
-                    MSTgraph[i][j] = NO_PATH_WEIGHT;
-                }
+                graph[i][j] = cloneWeight(NO_PATH_WEIGHT);
             }
         }
-        initMST = MSTgraph;
+        MSTgraph = cloneGraph(graph);
+        initMST = cloneGraph(MSTgraph);
 
         //判断网络节点的链接信息 是否读完
         boolean isNotEnd = true;
@@ -520,16 +544,12 @@ public class Deploy {
 
 
             //把边k和其前驱节点连接的边保存到生成树
-            Weight weight1 = new Weight();
-            weight1.setTotalBandwidth(min.getTotalBandwidth());
-            weight1.setUsedBandWidth(min.getUsedBandWidth());
-            weight1.setNetRentCost(min.getNetRentCost());
-            MSTgraph[preset[k]][k] = weight1;
-            Weight weight2 = new Weight();
-            weight2.setTotalBandwidth(min.getTotalBandwidth());
-            weight2.setUsedBandWidth(min.getUsedBandWidth());
-            weight2.setNetRentCost(min.getNetRentCost());
-            MSTgraph[k][preset[k]] = weight2;
+//            Weight weight1 = new Weight();
+//            weight1.setTotalBandwidth(min.getTotalBandwidth());
+//            weight1.setUsedBandWidth(min.getUsedBandWidth());
+//            weight1.setNetRentCost(min.getNetRentCost());
+            MSTgraph[preset[k]][k] = cloneWeight(min);
+            MSTgraph[k][preset[k]] = cloneWeight(min);
 
             mst.get(preset[v]).add(v);
 
