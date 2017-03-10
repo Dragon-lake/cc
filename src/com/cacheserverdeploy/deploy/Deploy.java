@@ -98,7 +98,14 @@ public class Deploy {
 //        }
 
         while (!isSatisfyAllConsumptionNodes()) {
-            Map<Integer, ArrayList<Integer>> mst = createMST(0);
+            //从不满足消费节点相邻的网络节点创建生成树
+            int start = 0;
+            for(int i = 0 ; i < consumptionNodeCount;i++) {
+                if (!satisfiedComsumptionNode.contains(i)) {
+                    start = i;
+                }
+            }
+            Map<Integer, ArrayList<Integer>> mst = createMST(start);
             int[] node = sortMSTNode(mst);
             for (int i = 0; i < node.length; i++) {
                 if (severList.contains(node[i])) {
@@ -118,8 +125,7 @@ public class Deploy {
                         }
                     }
                 }
-                if (!isSatisfyConsumptionNode(serverID, netNodes, orders)) {
-                } else {
+                if (isSatisfyConsumptionNode(serverID, netNodes, orders)) {
                     break;
                 }
 
@@ -127,7 +133,7 @@ public class Deploy {
             generateRemainGraph();
         }
 
-//        doOptimization();
+        doOptimization();
         String[] result = new String[2 + paths.size()];
         result[0] = paths.size() + "";
         result[1] = "";
@@ -207,58 +213,6 @@ public class Deploy {
 
         return true;
     }
-
-
-    /**
-     * 1. 生成树节点排序（排序规则，度从大到小）
-     * 2. 在度最大的点上 添加服务器
-     * <p>
-     * 3. 找出服务器到各个消费点的路径上最小的流量值
-     * 4. 如果该路径的最小的流量值大于等于消费节点所需的带宽，则选择该路径，并记录
-     * 5. 如果该路径的最小的流量值小于消费节点的带宽，则依旧选择该路径，消费节点所需要的带宽减去最小的流量值，并记录
-     * 6.
-     *
-     * @param node 一组排序好的生成树节点
-     * @return 所有服务器的ID
-     */
-//    public static String[] getDeployment(int[] node) {
-//
-//        int serverID = node[0];
-//        int[] orders = doBFSInMST(serverID);
-//
-//        //与消费节点相连的网络节点
-//        int[] netNodes = new int[consumptionNodeCount];
-//        int count = 0;
-//        //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
-//        for (int i = 0; i < orderInBFs.length; i++) {
-//            for (int j = 0; j < consumptionNodeCount; j++) {
-//                if (orderInBFs[i] == consumptionInfo.get(j).getLinkedID()) {
-//                    netNodes[count++] = orderInBFs[i];
-//                }
-//            }
-//        }
-//        if (isSatisfyConsumptionNode(serverID, netNodes, orders)) {
-//            System.out.println("全部满足");
-//        }
-//
-//        String[] result = new String[2 + paths.size()];
-//        result[0] = paths.size() + "";
-//        result[1] = "";
-//        for (int i = 0; i < paths.size(); i++) {
-//            StringBuffer sb = new StringBuffer();
-//            Stack<Integer> path = paths.get(i);
-//            while (path.size() != 0) {
-//                if (path.size() != 1) {
-//                    sb.append(path.pop() + " ");
-//                } else {
-//                    sb.append(path.pop());
-//                }
-//            }
-//            result[i + 2] = sb.toString();
-//        }
-//        return result;
-//
-//    }
 
 
     /**
@@ -409,7 +363,7 @@ public class Deploy {
                 while (successQueue.size() != 0) {
                     end = successQueue.poll();
                     path.add(end);
-                    MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
+                    MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
                     MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
                     start = end;
                 }
@@ -435,6 +389,8 @@ public class Deploy {
     }
 
     public static void generateRemainGraph() {
+        System.out.println("............................graph 0 1的节点" + graph[0][1].getUsedBandWidth());
+        System.out.println("............................graph 1 15的节点" + graph[1][15].getUsedBandWidth());
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
@@ -443,6 +399,8 @@ public class Deploy {
                 }
             }
         }
+        System.out.println("graph 0 1的节点" + graph[0][1].getUsedBandWidth());
+        System.out.println("graph 1 15的节点" + graph[1][15].getUsedBandWidth());
 
         MSTgraph = initMST;
 
