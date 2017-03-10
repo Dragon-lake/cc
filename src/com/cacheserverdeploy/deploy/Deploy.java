@@ -138,7 +138,7 @@ public class Deploy {
     }
 
     /**
-     * 对选路出的结果进行优化
+     * 对选路出的结果进行优化,出现的问题是合并完，还有可以合并的结果。
      */
     private static void doOptimization() {
         List<LinkedList<Integer>> tmp = paths;
@@ -267,6 +267,7 @@ public class Deploy {
         List<LinkedList<Integer>> tmpPaths = new ArrayList<LinkedList<Integer>>(netNodes.length);
 
         for (int i = 0; i < netNodes.length; i++) {
+            System.out.println("当前的消费节点是" + consumptionNetMap.get(netNodes[i]));
             //得到消费节点到服务节点的一个路径，若满足，则minBandWidth = 消费节点需求的带宽。若不满足，则minBandWidth = 该路径最短的带宽
             int cursor = netNodes[i];
             int requiredBandWidth = consumptionInfo.get(consumptionNetMap.get(netNodes[i])).getRequiredBandWidth();
@@ -287,6 +288,8 @@ public class Deploy {
                 if (minBandWidth > (totalBandWidth - usedBandWidth) && totalBandWidth > usedBandWidth) {
                     minBandWidth = totalBandWidth - usedBandWidth;
                 }
+                System.out.println("cursor " + cursor + " orders[cursor] " + orders[cursor] + "                   total   " + MSTgraph[cursor][orders[cursor]].getTotalBandwidth()
+                + " used " + MSTgraph[cursor][orders[cursor]].getUsedBandWidth());
                 if (totalBandWidth <= usedBandWidth) {
                     successQueue = null;
                     break;
@@ -320,14 +323,16 @@ public class Deploy {
                     path.add(end);
 //                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
                         MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
-                    System.out.println("MSTGraph start " + start + " end " + end + " used " + MSTgraph[start][end].getUsedBandWidth() + " total " + MSTgraph[start][end].getTotalBandwidth());
+                    System.out.println("MSTGraph start " + start + " end " + end + "                       used " + MSTgraph[start][end].getUsedBandWidth() + " total " + MSTgraph[start][end].getTotalBandwidth());
                         MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
 //                    }
                     start = end;
                 }
                 tmpPaths.add(path);
+                System.out.println("结束一条路径，服务器是 " + serverID + "————————————————————————————————————————————");
+            }else{
+                System.out.println("没有选择该路径-------------------------------------------------------------------");
             }
-            System.out.println("结束一条路径，服务器是 " + serverID + "————————————————————————————————————————————");
         }
 
         if (isSatisfy) {
@@ -379,7 +384,9 @@ public class Deploy {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
 //                    if (graph[i][j].getUsedBandWidth() < graph[i][j].totalBandwidth) {
-                        graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
+//                        graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
+                    graph[i][j].setUsedBandWidth(MSTgraph[i][j].getUsedBandWidth());
+
 //                    }
 //                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
                 }
@@ -522,53 +529,37 @@ public class Deploy {
 
         //初始化
         for (int i = 0; i < netNodeCount; i++) {
-            lowcost[i] = graph[start][i];
+            lowcost[i] = cloneWeight(graph[start][i]);
             vset[i] = 0;
             preset[i] = start;
-
             ArrayList<Integer> a = new ArrayList<Integer>();
             mst.put(i, a);
         }
         //起始节点被并入生成树
         vset[start] = 1;
-
         for (int i = 1; i < netNodeCount; i++) {
-
-            min = NO_PATH_WEIGHT;
-
+            min = cloneWeight(NO_PATH_WEIGHT);
             //选出候选边中的最小者
             for (int j = 0; j < netNodeCount; j++)
                 if (vset[j] == 0 && compareWeight(lowcost[j], min)) {
-                    min = lowcost[j];
+                    min = cloneWeight(lowcost[j]);
                     k = j;
                 }
             //k并入生成树
             vset[k] = 1;
             //k设为中介节点
             v = k;
-
-
             //把边k和其前驱节点连接的边保存到生成树
-//            Weight weight1 = new Weight();
-//            weight1.setTotalBandwidth(min.getTotalBandwidth());
-//            weight1.setUsedBandWidth(min.getUsedBandWidth());
-//            weight1.setNetRentCost(min.getNetRentCost());
             MSTgraph[preset[k]][k] = cloneWeight(min);
             MSTgraph[k][preset[k]] = cloneWeight(min);
-
             mst.get(preset[v]).add(v);
-
             //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
             for (int l = 0; l < netNodeCount; l++) {
-
                 if (vset[l] == 0 && compareWeight(graph[v][l], lowcost[l])) {
-                    lowcost[l] = graph[v][l];
+                    lowcost[l] = cloneWeight(graph[v][l]);
                     preset[l] = v;
                 }
-
             }
-
-
         }
         return mst;
     }
