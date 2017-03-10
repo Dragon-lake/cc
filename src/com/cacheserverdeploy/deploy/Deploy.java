@@ -90,6 +90,7 @@ public class Deploy {
                 }
             }
             Map<Integer, ArrayList<Integer>> mst = createMST(start);
+            System.out.println("创建了生成树----------------------------------开始迭代");
             int[] node = sortMSTNode(mst);
             for (int i = 0; i < node.length; i++) {
                 if (severList.contains(node[i])) {
@@ -319,16 +320,20 @@ public class Deploy {
                     path.add(end);
 //                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
                         MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
+                    System.out.println("MSTGraph start " + start + " end " + end + " used " + MSTgraph[start][end].getUsedBandWidth() + " total " + MSTgraph[start][end].getTotalBandwidth());
                         MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
 //                    }
                     start = end;
                 }
                 tmpPaths.add(path);
             }
+            System.out.println("结束一条路径，服务器是 " + serverID + "————————————————————————————————————————————");
         }
 
         if (isSatisfy) {
             paths.addAll(tmpPaths);
+            System.out.println("结束一个服务器————————————————————————————————————————————");
+
         } else {
             MSTgraph = tmpGraph;
             tmpPaths = null;
