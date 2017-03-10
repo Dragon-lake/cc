@@ -364,7 +364,8 @@ public class Deploy {
                     end = successQueue.poll();
                     path.add(end);
                     MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
-                    MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
+                    System.out.println("========MST graph 0 1 的节点 " + MSTgraph[0][1].getUsedBandWidth());
+                    System.out.println("~~~~~~~~graph 0 1的节点" + graph[0][1].getUsedBandWidth());
                     start = end;
                 }
                 lu.add(path);
@@ -390,17 +391,16 @@ public class Deploy {
 
     public static void generateRemainGraph() {
         System.out.println("............................graph 0 1的节点" + graph[0][1].getUsedBandWidth());
-        System.out.println("............................graph 1 15的节点" + graph[1][15].getUsedBandWidth());
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
+                    System.out.println("MSTgraph " + MSTgraph[i][j].getUsedBandWidth());
                     graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
-                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
+//                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
                 }
             }
         }
         System.out.println("graph 0 1的节点" + graph[0][1].getUsedBandWidth());
-        System.out.println("graph 1 15的节点" + graph[1][15].getUsedBandWidth());
 
         MSTgraph = initMST;
 
@@ -559,9 +559,31 @@ public class Deploy {
             vset[k] = 1;
             //k设为中介节点
             v = k;
+            Weight weight1 = new Weight();
+            weight1.setTotalBandwidth(min.getTotalBandwidth());
+            weight1.setUsedBandWidth(min.getUsedBandWidth());
+            weight1.setNetRentCost(min.getNetRentCost());
+            MSTgraph[preset[k]][k] = weight1;
+
+            Weight weight2 = new Weight();
+            weight2.setTotalBandwidth(min.getTotalBandwidth());
+            weight2.setUsedBandWidth(min.getUsedBandWidth());
+            weight2.setNetRentCost(min.getNetRentCost());
+            MSTgraph[k][preset[k]] = weight2;
+
+
+
 //                //把边k和其前驱节点连接的边保存到生成树
-            MSTgraph[preset[k]][k] = min;
-            MSTgraph[k][preset[k]] = min;
+//            MSTgraph[preset[k]][k].setNetRentCost(min.getNetRentCost());
+//            MSTgraph[preset[k]][k].setUsedBandWidth(min.getUsedBandWidth());
+//            MSTgraph[preset[k]][k].setTotalBandwidth(min.getTotalBandwidth());
+//            MSTgraph[k][preset[k]].setNetRentCost(min.getNetRentCost());
+//            MSTgraph[k][preset[k]].setUsedBandWidth(min.getUsedBandWidth());
+//            MSTgraph[k][preset[k]].setTotalBandwidth(min.getTotalBandwidth());
+//
+//            MSTgraph[preset[k]][k]=min;
+//            MSTgraph[k][preset[k]]=min;
+
             mst.get(preset[v]).add(v);
 
             //以刚并入的顶点v为中介，更新候选边和某些节点的前驱节点
