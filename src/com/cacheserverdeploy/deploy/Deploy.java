@@ -29,7 +29,7 @@ public class Deploy {
     private static Weight[][] MSTgraph;
 
     //BFS中的顺序数组
-    private static int[] orderInBFs;
+    private static int[] orderInBFS;
 
     private static List<LinkedList<Integer>> paths;
 
@@ -63,18 +63,6 @@ public class Deploy {
         /**do your work here**/
         initData(graphContent);
         return solveQuestion();
-
-//        int a = sToi(lineTos(graphContent[0])[2]);
-//        int b = sToi(lineTos(graphContent[0])[1]);
-//        String [] result = new String[a + 2];
-//        result[0] = a + "";
-//        result[1] = "";
-//        for (int i = 0 ; i < a ;i++) {
-//            String[] c = lineTos(graphContent[b + 5 + i]);
-//            result[2 + i] = c[1] + " " + i + " " + c[2];
-//        }
-//        return result;
-
     }
 
     /**
@@ -93,16 +81,12 @@ public class Deploy {
      */
 
     public static String[] solveQuestion() {
-//        while (isSatisfyAllConsumptionNodes()) {
-//
-//        }
-
         while (!isSatisfyAllConsumptionNodes()) {
             //从不满足消费节点相邻的网络节点创建生成树
             int start = 0;
             for(int i = 0 ; i < consumptionNodeCount;i++) {
                 if (!satisfiedComsumptionNode.contains(i)) {
-                    start = i;
+                    start = consumptionInfo.get(i).getLinkedID();
                 }
             }
             Map<Integer, ArrayList<Integer>> mst = createMST(start);
@@ -113,15 +97,15 @@ public class Deploy {
                 }
                 int serverID = node[i];
                 int[] orders = doBFSInMST(serverID);
-
                 //与消费节点相连的网络节点
                 int[] netNodes = new int[consumptionNodeCount];
                 int count = 0;
                 //层次遍历生成树，标记出是消费节点相连的网络节点的位置。
-                for (int k = 0; k < orderInBFs.length; k++) {
+                for (int k = 0; k < orderInBFS.length; k++) {
                     for (int j = 0; j < consumptionNodeCount; j++) {
-                        if (orderInBFs[k] == consumptionInfo.get(j).getLinkedID()) {
-                            netNodes[count++] = orderInBFs[k];
+                        if (orderInBFS[k] == consumptionInfo.get(j).getLinkedID()) {
+                            netNodes[count++] = orderInBFS[k];
+                            break;
                         }
                     }
                 }
@@ -147,25 +131,9 @@ public class Deploy {
                     sb.append(path.get(j));
                 }
             }
-//            while (path.size() != 0) {
-//                if (path.size() != 1) {
-//                    sb.append(path.pop()).append(" ");
-//                } else {
-//                    sb.append(path.pop());
-//                }
-//            }
             result[i + 2] = sb.toString();
         }
         return result;
-//        int[] orders = doBFSInMST(node[0]);
-//        for (int i = 0 ; i < orders.length;i++) {
-//            System.out.print(orders[i] + " ");
-//        }
-//        return new String[]{};
-//        return getDeployment(node);
-//        for (int i = 0 ;i < results.length;i++) {
-//            System.out.print(results[i] + " ");
-//        }
     }
 
     /**
@@ -221,6 +189,7 @@ public class Deploy {
      */
     public static int[] doBFSInMST(int beginNode) {
         int count = 0;
+        orderInBFS = new int[netNodeCount];
         int[] orders = new int[netNodeCount];
         for (int i = 0; i < netNodeCount; i++) {
             orders[i] = -1;
@@ -233,7 +202,7 @@ public class Deploy {
 
         Queue<Integer> queue = new LinkedList<Integer>();
         queue.offer(beginNode);
-        orderInBFs[count++] = beginNode;
+        orderInBFS[count++] = beginNode;
         visited[beginNode] = true;
 
         while (!queue.isEmpty()) {
@@ -245,7 +214,7 @@ public class Deploy {
                 if (isLinked(MSTgraph, current, i)) {
                     if (!visited[i]) {
                         queue.offer(i);
-                        orderInBFs[count++] = i;
+                        orderInBFS[count++] = i;
                         orders[i] = current;
                         visited[i] = true;
                     }
@@ -294,7 +263,7 @@ public class Deploy {
 
         //保存状态，以便回滚
         Weight[][] tmpGraph = MSTgraph;
-        List<LinkedList<Integer>> lu = new ArrayList<LinkedList<Integer>>(netNodes.length);
+        List<LinkedList<Integer>> tmpPaths = new ArrayList<LinkedList<Integer>>(netNodes.length);
 
         for (int i = 0; i < netNodes.length; i++) {
             //得到消费节点到服务节点的一个路径，若满足，则minBandWidth = 消费节点需求的带宽。若不满足，则minBandWidth = 该路径最短的带宽
@@ -323,22 +292,7 @@ public class Deploy {
                 }
                 successQueue.offer(orders[cursor]);
                 cursor = orders[cursor];
-//                if (totalBandWidth >= requiredBandWidth && isConnected) {
-//                    minBandWidth = requiredBandWidth;
-//                    successQueue.offer(orders[cursor]);
-//
-//                }else{
-//                    failQueue.offer(orders[cursor]);
-//                    minBandWidth = Math.min(minBandWidth,totalBandWidth);
-//                    isConnected = false;
-//
-//                }
             }
-
-//            if (successQueue != null && successQueue.peek() != serverID) {
-//                successQueue.offer(serverID);
-//            }
-
             if (successQueue != null) {
                 LinkedList<Integer> path = new LinkedList<Integer>();
                 if (minBandWidth >= requiredBandWidth) {
@@ -363,21 +317,21 @@ public class Deploy {
                 while (successQueue.size() != 0) {
                     end = successQueue.poll();
                     path.add(end);
-                    MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
-                    System.out.println("========MST graph 0 1 的节点 " + MSTgraph[0][1].getUsedBandWidth());
-                    System.out.println("~~~~~~~~graph 0 1的节点" + graph[0][1].getUsedBandWidth());
+                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
+                        MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
+                        MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
+                    }
                     start = end;
                 }
-                lu.add(path);
+                tmpPaths.add(path);
             }
-
-
         }
 
         if (isSatisfy) {
-            paths.addAll(lu);
+            paths.addAll(tmpPaths);
         } else {
             MSTgraph = tmpGraph;
+            tmpPaths = null;
         }
 
         return isSatisfy;
@@ -390,17 +344,16 @@ public class Deploy {
     }
 
     public static void generateRemainGraph() {
-        System.out.println("............................graph 0 1的节点" + graph[0][1].getUsedBandWidth());
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
-                    System.out.println("MSTgraph " + MSTgraph[i][j].getUsedBandWidth());
-                    graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
+                    if (graph[i][j].getUsedBandWidth() < graph[i][j].totalBandwidth) {
+                        graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
+                    }
 //                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
                 }
             }
         }
-        System.out.println("graph 0 1的节点" + graph[0][1].getUsedBandWidth());
 
         MSTgraph = initMST;
 
@@ -425,7 +378,7 @@ public class Deploy {
         //构造图
         graph = new Weight[netNodeCount][netNodeCount];
         MSTgraph = new Weight[netNodeCount][netNodeCount];
-        orderInBFs = new int[netNodeCount];
+        orderInBFS = new int[netNodeCount];
         paths = new LinkedList<LinkedList<Integer>>();
         satisfiedComsumptionNode = new ArrayList<Integer>(consumptionNodeCount);
         severList = new ArrayList<Integer>(netNodeCount);
@@ -434,8 +387,10 @@ public class Deploy {
         //初始化图中的权值信息，默认为所有节点不可达
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
-                graph[i][j] = NO_PATH_WEIGHT;
-                MSTgraph[i][j] = NO_PATH_WEIGHT;
+                if (i != j) {
+                    graph[i][j] = NO_PATH_WEIGHT;
+                    MSTgraph[i][j] = NO_PATH_WEIGHT;
+                }
             }
         }
         initMST = MSTgraph;
@@ -496,6 +451,9 @@ public class Deploy {
      * @return
      */
     public static boolean isLinked(Weight[][] graph, int start, int end) {
+        if (start == end) {
+            return false;
+        }
         if (graph[start][end].getNetRentCost() < NO_PATH_WEIGHT.getNetRentCost() &&
                 graph[start][end].getTotalBandwidth() > NO_PATH_WEIGHT.getTotalBandwidth() &&
                 graph[end][start].getNetRentCost() < NO_PATH_WEIGHT.getNetRentCost() &&
@@ -559,30 +517,19 @@ public class Deploy {
             vset[k] = 1;
             //k设为中介节点
             v = k;
+
+
+            //把边k和其前驱节点连接的边保存到生成树
             Weight weight1 = new Weight();
             weight1.setTotalBandwidth(min.getTotalBandwidth());
             weight1.setUsedBandWidth(min.getUsedBandWidth());
             weight1.setNetRentCost(min.getNetRentCost());
             MSTgraph[preset[k]][k] = weight1;
-
             Weight weight2 = new Weight();
             weight2.setTotalBandwidth(min.getTotalBandwidth());
             weight2.setUsedBandWidth(min.getUsedBandWidth());
             weight2.setNetRentCost(min.getNetRentCost());
             MSTgraph[k][preset[k]] = weight2;
-
-
-
-//                //把边k和其前驱节点连接的边保存到生成树
-//            MSTgraph[preset[k]][k].setNetRentCost(min.getNetRentCost());
-//            MSTgraph[preset[k]][k].setUsedBandWidth(min.getUsedBandWidth());
-//            MSTgraph[preset[k]][k].setTotalBandwidth(min.getTotalBandwidth());
-//            MSTgraph[k][preset[k]].setNetRentCost(min.getNetRentCost());
-//            MSTgraph[k][preset[k]].setUsedBandWidth(min.getUsedBandWidth());
-//            MSTgraph[k][preset[k]].setTotalBandwidth(min.getTotalBandwidth());
-//
-//            MSTgraph[preset[k]][k]=min;
-//            MSTgraph[k][preset[k]]=min;
 
             mst.get(preset[v]).add(v);
 
@@ -721,13 +668,6 @@ public class Deploy {
             for (int i = 0; i < lists.size(); i++) {
                 System.out.println(entry.getKey() + " " + lists.get(i));
             }
-//            System.out.print(entry.getKey());
-//            System.out.println("--------------");
-//            ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
-//            for (int i = 0 ; i < lists.size();i++) {
-//                System.out.print(lists.get(i) + " ");
-//            }
-//            System.out.println();
         }
     }
 
