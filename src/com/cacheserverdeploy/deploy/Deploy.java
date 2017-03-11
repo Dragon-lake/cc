@@ -137,6 +137,22 @@ public class Deploy {
         return result;
     }
 
+    public static List<LinkedList<Integer>> cloneLinkList(List<LinkedList<Integer>> paths){
+        List<LinkedList<Integer>> linkedLists=new ArrayList<>();
+
+        for(int i=0;i<paths.size();i++){
+            LinkedList<Integer> ll=new LinkedList<>();
+            LinkedList<Integer> l2=paths.get(i);
+
+            for(int j=0;j<l2.size();j++){
+                ll.add(l2.get(j));
+            }
+            linkedLists.add(ll);
+        }
+
+        return linkedLists;
+    }
+
     /**
      * 对选路出的结果进行优化,出现的问题是合并完，还有可以合并的结果。
      */
@@ -265,6 +281,7 @@ public class Deploy {
         //保存状态，以便回滚
         Weight[][] tmpGraph = cloneGraph(MSTgraph);
         List<LinkedList<Integer>> tmpPaths = new ArrayList<LinkedList<Integer>>(netNodes.length);
+        Map<Integer,ConsumptionNodeInfo> tmpInfo=cloneConsumptionInfo(consumptionInfo);
 
         for (int i = 0; i < netNodes.length; i++) {
             System.out.println("当前的消费节点是" + consumptionNetMap.get(netNodes[i]));
@@ -340,11 +357,28 @@ public class Deploy {
             System.out.println("结束一个服务器————————————————————————————————————————————");
 
         } else {
-            MSTgraph = tmpGraph;
+            MSTgraph = cloneGraph(tmpGraph);
+            consumptionInfo=cloneConsumptionInfo(tmpInfo);
             tmpPaths = null;
         }
 
         return isSatisfy;
+
+    }
+
+    private static Map<Integer, ConsumptionNodeInfo> cloneConsumptionInfo(Map<Integer, ConsumptionNodeInfo> consumptionInfo) {
+
+        Map<Integer,ConsumptionNodeInfo> infoMap=new HashMap<>();
+
+        for(int i=0;i<consumptionInfo.size();i++){
+            ConsumptionNodeInfo consumptionNodeInfo=new ConsumptionNodeInfo();
+            ConsumptionNodeInfo c2=consumptionInfo.get(i);
+            consumptionNodeInfo.setLinkedID(c2.getLinkedID());
+            consumptionNodeInfo.setRequiredBandWidth(c2.getRequiredBandWidth());
+            infoMap.put(i,consumptionNodeInfo);
+        }
+
+        return infoMap;
 
     }
 
