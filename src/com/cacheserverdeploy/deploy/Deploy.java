@@ -51,7 +51,7 @@ public class Deploy {
     private static ArrayList<Integer> satisfiedComsumptionNode;
 
     //表示不可达的常量
-    private  static Weight NO_PATH_WEIGHT = new Weight();
+    private static Weight NO_PATH_WEIGHT = new Weight();
 
     static {
         NO_PATH_WEIGHT.setTotalBandwidth(0);
@@ -90,7 +90,7 @@ public class Deploy {
                 }
             }
             Map<Integer, ArrayList<Integer>> mst = createMST(start);
-            System.out.println("创建了生成树----------------------------------开始迭代");
+//            System.out.println("创建了生成树----------------------------------开始迭代");
             int[] node = sortMSTNode(mst);
             for (int i = 0; i < node.length; i++) {
                 if (severList.contains(node[i])) {
@@ -137,14 +137,14 @@ public class Deploy {
         return result;
     }
 
-    public static List<LinkedList<Integer>> cloneLinkList(List<LinkedList<Integer>> paths){
-        List<LinkedList<Integer>> linkedLists=new ArrayList<>();
+    public static List<LinkedList<Integer>> cloneLinkList(List<LinkedList<Integer>> paths) {
+        List<LinkedList<Integer>> linkedLists = new ArrayList<LinkedList<Integer>>();
 
-        for(int i=0;i<paths.size();i++){
-            LinkedList<Integer> ll=new LinkedList<>();
-            LinkedList<Integer> l2=paths.get(i);
+        for (int i = 0; i < paths.size(); i++) {
+            LinkedList<Integer> ll = new LinkedList<Integer>();
+            LinkedList<Integer> l2 = paths.get(i);
 
-            for(int j=0;j<l2.size();j++){
+            for (int j = 0; j < l2.size(); j++) {
                 ll.add(l2.get(j));
             }
             linkedLists.add(ll);
@@ -157,7 +157,8 @@ public class Deploy {
      * 对选路出的结果进行优化,出现的问题是合并完，还有可以合并的结果。
      */
     private static void doOptimization() {
-        List<LinkedList<Integer>> tmp = paths;
+        List<LinkedList<Integer>> tmp = cloneLinkList(paths);
+
         for (int g = 0; g < tmp.size(); g++) {
             LinkedList<Integer> item = tmp.get(g);
             for (int i = item.size() - 1; i > 1; i--) {
@@ -169,18 +170,41 @@ public class Deploy {
             }
         }
 
-        for (int i = 0; i < paths.size(); i++) {
-            for (int j = i + 1; j < paths.size(); j++) {
+        paths = tmp;
+        int[] equals;
+        while ((equals = isExistCombinePath(paths)).length != 0) {
+            int value1 = paths.get(equals[0]).get(0);
+            int value2 = paths.get(equals[1]).get(0);
+            paths.get(equals[1]).set(0, value1 + value2);
+            paths.remove(equals[0]);
+        }
+
+    }
+
+
+    /**
+     * 判断一个路经集合是否存在两条可以合并的路线
+     * 合并的原则是：除去所需带宽之外的，元素是全部相等，或者存在包含的情况。
+     *
+     * @param paths
+     * @return
+     */
+    public static int[] isExistCombinePath(List<LinkedList<Integer>> paths) {
+        List<LinkedList<Integer>> tmp = cloneLinkList(paths);
+        for (int i = 0; i < tmp.size(); i++) {
+            tmp.get(i).remove(0);
+        }
+        for (int i = 0; i < tmp.size(); i++) {
+            for (int j = i + 1; j < tmp.size(); j++) {
                 if (isEqualOfTwoList(tmp.get(i), tmp.get(j))) {
-                    int value1 = tmp.get(i).get(0);
-                    int value2 = tmp.get(j).get(0);
-                    tmp.get(j).set(0, value1 + value2);
-                    tmp.remove(i);
+                    return new int[]{i, j};
+                    //containsAll可能包含顺序不正确的包含，比如1，2，3，5 包含 5 3 2 这种
+                } else if (tmp.get(i).containsAll(tmp.get(j)) || tmp.get(j).containsAll(tmp.get(i))) {
+                    return new int[]{i, j};
                 }
             }
         }
-
-        paths = tmp;
+        return new int[]{};
 
     }
 
@@ -281,10 +305,10 @@ public class Deploy {
         //保存状态，以便回滚
         Weight[][] tmpGraph = cloneGraph(MSTgraph);
         List<LinkedList<Integer>> tmpPaths = new ArrayList<LinkedList<Integer>>(netNodes.length);
-        Map<Integer,ConsumptionNodeInfo> tmpInfo=cloneConsumptionInfo(consumptionInfo);
+        Map<Integer, ConsumptionNodeInfo> tmpInfo = cloneConsumptionInfo(consumptionInfo);
 
         for (int i = 0; i < netNodes.length; i++) {
-            System.out.println("当前的消费节点是" + consumptionNetMap.get(netNodes[i]));
+//            System.out.println("当前的消费节点是" + consumptionNetMap.get(netNodes[i]));
             //得到消费节点到服务节点的一个路径，若满足，则minBandWidth = 消费节点需求的带宽。若不满足，则minBandWidth = 该路径最短的带宽
             int cursor = netNodes[i];
             int requiredBandWidth = consumptionInfo.get(consumptionNetMap.get(netNodes[i])).getRequiredBandWidth();
@@ -305,8 +329,8 @@ public class Deploy {
                 if (minBandWidth > (totalBandWidth - usedBandWidth) && totalBandWidth > usedBandWidth) {
                     minBandWidth = totalBandWidth - usedBandWidth;
                 }
-                System.out.println("cursor " + cursor + " orders[cursor] " + orders[cursor] + "                   total   " + MSTgraph[cursor][orders[cursor]].getTotalBandwidth()
-                + " used " + MSTgraph[cursor][orders[cursor]].getUsedBandWidth());
+//                System.out.println("cursor " + cursor + " orders[cursor] " + orders[cursor] + "                   total   " + MSTgraph[cursor][orders[cursor]].getTotalBandwidth()
+//                        + " used " + MSTgraph[cursor][orders[cursor]].getUsedBandWidth());
                 if (totalBandWidth <= usedBandWidth) {
                     successQueue = null;
                     break;
@@ -339,26 +363,26 @@ public class Deploy {
                     end = successQueue.poll();
                     path.add(end);
 //                    if (MSTgraph[start][end].getUsedBandWidth() < MSTgraph[start][end].totalBandwidth) {
-                        MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
-                    System.out.println("MSTGraph start " + start + " end " + end + "                       used " + MSTgraph[start][end].getUsedBandWidth() + " total " + MSTgraph[start][end].getTotalBandwidth());
-                        MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
+                    MSTgraph[start][end].setUsedBandWidth(minBandWidth + MSTgraph[start][end].getUsedBandWidth());
+//                    System.out.println("MSTGraph start " + start + " end " + end + "                       used " + MSTgraph[start][end].getUsedBandWidth() + " total " + MSTgraph[start][end].getTotalBandwidth());
+                    MSTgraph[end][start].setUsedBandWidth(minBandWidth + MSTgraph[end][start].getUsedBandWidth());
 //                    }
                     start = end;
                 }
                 tmpPaths.add(path);
-                System.out.println("结束一条路径，服务器是 " + serverID + "————————————————————————————————————————————");
-            }else{
-                System.out.println("没有选择该路径-------------------------------------------------------------------");
+//                System.out.println("结束一条路径，服务器是 " + serverID + "————————————————————————————————————————————");
+            } else {
+//                System.out.println("没有选择该路径-------------------------------------------------------------------");
             }
         }
 
         if (isSatisfy) {
             paths.addAll(tmpPaths);
-            System.out.println("结束一个服务器————————————————————————————————————————————");
+//            System.out.println("结束一个服务器————————————————————————————————————————————");
 
         } else {
             MSTgraph = cloneGraph(tmpGraph);
-            consumptionInfo=cloneConsumptionInfo(tmpInfo);
+            consumptionInfo = cloneConsumptionInfo(tmpInfo);
             tmpPaths = null;
         }
 
@@ -368,14 +392,14 @@ public class Deploy {
 
     private static Map<Integer, ConsumptionNodeInfo> cloneConsumptionInfo(Map<Integer, ConsumptionNodeInfo> consumptionInfo) {
 
-        Map<Integer,ConsumptionNodeInfo> infoMap=new HashMap<>();
+        Map<Integer, ConsumptionNodeInfo> infoMap = new HashMap<Integer, ConsumptionNodeInfo>();
 
-        for(int i=0;i<consumptionInfo.size();i++){
-            ConsumptionNodeInfo consumptionNodeInfo=new ConsumptionNodeInfo();
-            ConsumptionNodeInfo c2=consumptionInfo.get(i);
+        for (int i = 0; i < consumptionInfo.size(); i++) {
+            ConsumptionNodeInfo consumptionNodeInfo = new ConsumptionNodeInfo();
+            ConsumptionNodeInfo c2 = consumptionInfo.get(i);
             consumptionNodeInfo.setLinkedID(c2.getLinkedID());
             consumptionNodeInfo.setRequiredBandWidth(c2.getRequiredBandWidth());
-            infoMap.put(i,consumptionNodeInfo);
+            infoMap.put(i, consumptionNodeInfo);
         }
 
         return infoMap;
@@ -417,12 +441,7 @@ public class Deploy {
         for (int i = 0; i < netNodeCount; i++) {
             for (int j = 0; j < netNodeCount; j++) {
                 if (isLinked(MSTgraph, i, j)) {
-//                    if (graph[i][j].getUsedBandWidth() < graph[i][j].totalBandwidth) {
-//                        graph[i][j].setUsedBandWidth(graph[i][j].getUsedBandWidth() + MSTgraph[i][j].getUsedBandWidth());
                     graph[i][j].setUsedBandWidth(MSTgraph[i][j].getUsedBandWidth());
-
-//                    }
-//                    graph[j][i].setUsedBandWidth(graph[j][i].getUsedBandWidth() + MSTgraph[j][i].getUsedBandWidth());
                 }
             }
         }
@@ -716,7 +735,7 @@ public class Deploy {
             Map.Entry entry = (Map.Entry) iterator.next();
             ArrayList<Integer> lists = (ArrayList<Integer>) entry.getValue();
             for (int i = 0; i < lists.size(); i++) {
-                System.out.println(entry.getKey() + " " + lists.get(i));
+//                System.out.println(entry.getKey() + " " + lists.get(i));
             }
         }
     }
