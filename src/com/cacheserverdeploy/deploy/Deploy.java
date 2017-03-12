@@ -61,8 +61,21 @@ public class Deploy {
 
     public static String[] deployServer(String[] graphContent) {
         /**do your work here**/
+//        initData(graphContent);
+//        return solveQuestion();
         initData(graphContent);
-        return solveQuestion();
+        String[] result = new String[consumptionNodeCount + 2];
+        result[0] = consumptionNodeCount + "";
+        result[1] = "";
+        for (int i = 0; i < consumptionNodeCount; i++) {
+            if (i != consumptionNodeCount - 1) {
+                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
+            } else {
+                result[i + 2] = consumptionInfo.get(i).getLinkedID() + " " + i + " " + consumptionInfo.get(i).getRequiredBandWidth();
+            }
+
+        }
+        return result;
     }
 
     /**
